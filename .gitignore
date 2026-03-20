@@ -1,0 +1,13 @@
+.DS_Store
+**/.DS_Store
+
+# karabiner
+**/automatic_backups/
+
+# terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+
+# nvim
+lazy-lock.json
