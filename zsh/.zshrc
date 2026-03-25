@@ -70,17 +70,23 @@ alias stmysql='gcloud compute ssh st-bastion-prod --project=sitest-147004 --zone
 gr() {
   local opener="nvim"
   local force_file_mode=0
+  local selected
+  local -a rg_args
 
-  # ===== オプション処理 =====
-  while [[ "$1" == -* ]]; do
+  # gr 独自オプションだけここで処理
+  while [[ $# -gt 0 ]]; do
     case "$1" in
-      -c)
+      --code)
         opener="code"
         shift
         ;;
-      -f)
+      --files)
         force_file_mode=1
         shift
+        ;;
+      --)
+        shift
+        break
         ;;
       *)
         break
@@ -88,15 +94,13 @@ gr() {
     esac
   done
 
-  local selected
-
-  # ===== ファイル名検索モード =====
+  # ファイル名検索モード
   if [[ $# -eq 0 || $force_file_mode -eq 1 ]]; then
     selected=$(
-      rg --files --hidden --glob "!.git" \
+      rg --files --hidden --glob '!.git' \
       | fzf --prompt 'file> ' \
-            --preview 'bat --style=numbers --color=always {} 2>/dev/null' \
-            --preview-window 'up:40%:wrap'
+          --preview 'bat --style=numbers --color=always {} 2>/dev/null' \
+          --preview-window 'up:40%:wrap'
     )
 
     [[ -z "$selected" ]] && return
@@ -109,23 +113,26 @@ gr() {
     return
   fi
 
-  # ===== 中身検索モード =====
+  # 残りは全部 rg に渡す
+  rg_args=("$@")
+
+  # 中身検索モード
   selected=$(
-    rg --line-number --no-heading --smart-case "$@" \
+    rg --line-number --no-heading --smart-case "${rg_args[@]}" \
     | fzf --delimiter : \
-          --preview '
-            bash -c "
-              file=\$1
-              line=\$2
-              start=\$((line-5)); [ \$start -lt 1 ] && start=1
-              end=\$((line+5))
-              bat --style=numbers --color=always \
-                  --line-range \$start:\$end \
-                  --highlight-line \$line \
-                  \"\$file\" 2>/dev/null
-            " _ {1} {2}
-          ' \
-          --preview-window 'up:40%:wrap'
+        --preview '
+          bash -c "
+            file=\$1
+            line=\$2
+            start=\$((line-5)); [ \$start -lt 1 ] && start=1
+            end=\$((line+5))
+            bat --style=numbers --color=always \
+              --line-range \$start:\$end \
+              --highlight-line \$line \
+              \"\$file\" 2>/dev/null
+          " _ {1} {2}
+        ' \
+        --preview-window 'up:40%:wrap'
   )
 
   [[ -z "$selected" ]] && return
